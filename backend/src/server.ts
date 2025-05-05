@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger'; // Import the swagger config
 import OpenAI from 'openai'; // Import OpenAI client
 import rateLimit from 'express-rate-limit'; // Import express-rate-limit
+import cors from 'cors'; // Import cors
 
 // Load environment variables from .env file
 dotenv.config();
@@ -17,6 +18,14 @@ const openai = new OpenAI({
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// --- CORS Setup ---
+const corsOptions = {
+  origin: 'http://localhost:8080', // Allow only your frontend origin
+  optionsSuccessStatus: 200 // For legacy browser support
+};
+app.use(cors(corsOptions));
+// ------------------
 
 // --- Rate Limiter Setup ---
 // Apply to all requests starting with /api/
