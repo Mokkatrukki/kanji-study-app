@@ -38,6 +38,10 @@ const resultMeaning = document.getElementById('result-meaning') as HTMLElement;
 const compoundsList = document.getElementById('compounds-list') as HTMLUListElement;
 const sentencesList = document.getElementById('sentences-list') as HTMLDivElement;
 
+// --- Initial State Setup ---
+hideResults(); // Explicitly hide results on script load
+hideError();   // Explicitly hide error on script load
+
 // --- Event Listeners ---
 generateButton.addEventListener('click', handleGenerateClick);
 
