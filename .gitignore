@@ -1,20 +1,17 @@
-# Backend Dependencies/Build
-backend/node_modules/
-backend/dist/
-backend/.env
+# Dependencies
+node_modules/
 
-# Frontend Dependencies/Build
-frontend/node_modules/
-frontend/dist/
+# Production build
+dist/
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Compiled static assets (optional to ignore, depends on workflow)
+# If you build these locally before committing, you might not ignore them.
+# If they are built during deployment, definitely ignore them.
+# src/public/js/
+# src/public/css/
+
+# Environment variables
+.env*
 
 # Logs
 logs
@@ -24,6 +21,15 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # IDE / Editor specific
 .idea/

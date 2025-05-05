@@ -55,7 +55,7 @@ async function handleGenerateClick() {
         return;
     }
     // Simple regex check - backend has the more robust one
-    if (!/^[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]+$/.test(kanji)) {
+    if (!/^[一-鿿㐀-䶿豈-﫿]+$/.test(kanji)) {
          showError('Input must contain only Kanji characters.');
          return;
      }
@@ -69,8 +69,8 @@ async function handleGenerateClick() {
     hideResults();
 
     try {
-        // Use the absolute URL of the backend API
-        const backendUrl = 'http://localhost:3001/api/kanji'; // Backend runs on 3001
+        // Use a relative URL since frontend and API are served from the same origin
+        const backendUrl = '/api/kanji'; // Relative path
         const response = await fetch(backendUrl, {
             method: 'POST',
             headers: {
@@ -166,4 +166,7 @@ function hideResults() {
     // ... etc ...
 }
 
-console.log("Kanji Study App script loaded."); 
+console.log("Kanji Study App script loaded.");
+
+// Add an empty export to treat this file as a module, resolving top-level await issue
+export {}; 

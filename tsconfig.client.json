@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2016",
+    "module": "ES6", // Keep ES module syntax for browser
+    "outDir": "./dist/public/js",
+    "rootDir": "./src/public/ts",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    // Ensure DOM types are available
+    "lib": ["ES2016", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/public/ts/**/*.ts"],
+  "exclude": ["node_modules"]
+} 
