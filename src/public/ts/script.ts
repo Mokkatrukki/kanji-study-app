@@ -11,12 +11,19 @@ type ExampleSentence = {
     translation: string;
 };
 
+// New type for Tatoeba example sentences
+type TatoebaSentence = {
+    japanese: string;
+    reading: string | null; // Reading can be null
+    translation: string;
+};
+
 type KanjiApiResponse = {
     kanji: string;
     reading: string;
     meaning: string;
     compound_words: CompoundWord[];
-    example_sentences: string;
+    example_sentences: TatoebaSentence[]; // Changed from string to TatoebaSentence[]
 };
 
 // --- DOM Element Selection ---
@@ -110,22 +117,25 @@ function displayResults(data: KanjiApiResponse) {
         compoundsList.innerHTML = '<li>No compound words found.</li>';
     }
 
-    // Display example sentences placeholder
+    // Display example sentences
     sentencesList.innerHTML = ''; // Clear previous results
-    if (data.example_sentences === "-") {
-        const p = document.createElement('p');
-        p.textContent = "Example sentences are not available.";
-        p.className = "text-gray-500 italic";
-        sentencesList.appendChild(p);
-    } else if (typeof data.example_sentences === 'string' && data.example_sentences.trim() !== '') {
-        // In case the API might send something other than "-" as a string
-        const p = document.createElement('p');
-        p.textContent = data.example_sentences;
-        sentencesList.appendChild(p);
+    if (data.example_sentences && data.example_sentences.length > 0) {
+        data.example_sentences.forEach(sentence => {
+            const div = document.createElement('div');
+            div.className = 'mb-4 pt-2 pb-2 border-b border-gray-200'; // Simpler container, more like a list item with a bottom border
+
+            let sentenceHTML = `<p class="text-xl font-medium text-gray-800">${sentence.japanese}</p>`;
+            if (sentence.reading) {
+                sentenceHTML += `<p class="text-md text-gray-600">${sentence.reading}</p>`;
+            }
+            sentenceHTML += `<p class="text-sm text-gray-500 italic mt-1">${sentence.translation}</p>`;
+            
+            div.innerHTML = sentenceHTML;
+            sentencesList.appendChild(div);
+        });
     } else {
-        // Fallback or if it somehow becomes an object again, or empty string
         const p = document.createElement('p');
-        p.textContent = "Example sentences are not available.";
+        p.textContent = "No example sentences found from Tatoeba.";
         p.className = "text-gray-500 italic";
         sentencesList.appendChild(p);
     }

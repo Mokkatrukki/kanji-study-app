@@ -66,11 +66,17 @@ const openai = new OpenAI({
  *                        meaning: { type: string }
  *                    example:
  *                      - { word: "電車", reading: "でんしゃ", meaning: "train (electric car)" }
- *                      - { word: "自動車", reading: "じどうしゃ", meaning: "automobile" }
  *                  example_sentences:
- *                    type: string
- *                    description: Placeholder for example sentences (not provided by this version).
- *                    example: "-"
+ *                    type: array
+ *                    description: Example sentences from Tatoeba.
+ *                    items:
+ *                      type: object
+ *                      properties:
+ *                        japanese: { type: string, description: "Japanese sentence." }
+ *                        reading: { type: string, nullable: true, description: "Romaji or Kana reading of the sentence (if available)." }
+ *                        translation: { type: string, description: "English translation." }
+ *                    example:
+ *                      - { japanese: "想像できる？", reading: "そうぞうできる？", translation: "Can you picture it?" }
  *       400:
  *         description: Invalid input.
  *         content:
@@ -162,8 +168,81 @@ router.post('/kanji', async (req: Request, res: Response) => {
         reading: primaryReading,
         meaning: jishoData.meaning || "N/A",
         compound_words: compound_words,
-        example_sentences: "-" // Added placeholder for example sentences
+        example_sentences: [] // Initialize as empty array
       };
+
+      // --- Fetch Example Sentences from Tatoeba ---
+      try {
+        const tatoebaQuery = encodeURIComponent(kanji);
+        // Corrected hostname to api.tatoeba.org and using /unstable/sentences endpoint, added sort parameter
+        const tatoebaUrl = `https://api.tatoeba.org/unstable/sentences?lang=jpn&q=${tatoebaQuery}&trans:lang=eng&trans:is_direct=yes&limit=5&sort=relevance`;
+        console.log(`Fetching example sentences from Tatoeba (api.tatoeba.org): ${tatoebaUrl}`);
+        const tatoebaResponse = await fetch(tatoebaUrl);
+
+        if (tatoebaResponse.ok) {
+          const tatoebaData = await tatoebaResponse.json();
+          // Adjusted to look for results in tatoebaData.data as per the new example
+          if (tatoebaData.data && tatoebaData.data.length > 0) {
+            responseData.example_sentences = tatoebaData.data.map((item: any) => {
+              let japaneseSentence = item.text || "";
+              let englishTranslation = "";
+              let sentenceReading = null; 
+
+              // Iterate through all translation groups and then translations within each group
+              if (item.translations && Array.isArray(item.translations)) {
+                let foundDirectEnglish = false;
+                for (const group of item.translations) {
+                  if (Array.isArray(group)) {
+                    const directEng = group.find((t: any) => t.lang === 'eng' && t.isDirect);
+                    if (directEng) {
+                      englishTranslation = directEng.text;
+                      foundDirectEnglish = true;
+                      break; // Found direct English, no need to search further
+                    }
+                  }
+                }
+                // Fallback: if no direct English translation was found, search for any English translation
+                if (!foundDirectEnglish) {
+                  for (const group of item.translations) {
+                    if (Array.isArray(group)) {
+                      const anyEng = group.find((t: any) => t.lang === 'eng');
+                      if (anyEng) {
+                        englishTranslation = anyEng.text;
+                        break; // Found an English translation, use it
+                      }
+                    }
+                  }
+                }
+              }
+              
+              // Attempt to get a reading (simplified for now)
+              if (item.transcriptions && item.transcriptions.length > 0) {
+                const hiraganaTranscription = item.transcriptions.find((t: any) => t.script === 'Hrkt');
+                if (hiraganaTranscription && hiraganaTranscription.text) {
+                    // Basic cleanup: remove original kanji and brackets if pattern is [Kanji|Reading]
+                    // This is a simplification and might need refinement.
+                    sentenceReading = hiraganaTranscription.text.replace(/\[[^\|]+\|([^\]]+)\]/g, '$1').replace(/[\s\[\]]/g, '');
+                } else if (item.transcriptions[0] && item.transcriptions[0].text) {
+                    // Fallback to first transcription if no Hrkt found
+                    sentenceReading = item.transcriptions[0].text.replace(/\[[^\|]+\|([^\]]+)\]/g, '$1').replace(/[\s\[\]]/g, '');
+                }
+              }
+
+              return {
+                japanese: japaneseSentence,
+                reading: sentenceReading,
+                translation: englishTranslation,
+              };
+            }).filter((s:any) => s.japanese && s.translation); 
+          }
+        } else {
+          console.warn(`Tatoeba API (unstable) request failed with status: ${tatoebaResponse.status}`);
+        }
+      } catch (tatoebaError) {
+        console.error("Error fetching or parsing from Tatoeba API:", tatoebaError);
+        // Keep example_sentences as empty array or handle as needed
+      }
+      // -----------------------------------------
 
       kanjiCache.set(kanji, responseData);
       console.log(`Stored Jisho response for ${kanji} in cache.`);
