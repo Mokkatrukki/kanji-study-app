@@ -1,7 +1,12 @@
 import { Router, Request, Response } from 'express';
 import OpenAI from 'openai';
+import NodeCache from 'node-cache';
 
 const router = Router();
+
+// Initialize cache with a default TTL (e.g., 1 hour = 3600 seconds)
+// and checkperiod (e.g., 10 minutes = 600 seconds) to automatically delete expired items
+const kanjiCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 // --- Initialize OpenAI Client ---
 // Ensure OPENAI_API_KEY is set in your root .env file
@@ -105,9 +110,24 @@ router.post('/kanji', async (req: Request, res: Response) => {
   }
   // ------------------------
 
+  // --- Check Cache ---
+  const cachedData = kanjiCache.get(kanji);
+  if (cachedData) {
+    console.log(`Cache hit for kanji: ${kanji}`);
+    return res.status(200).json(cachedData);
+  }
+  console.log(`Cache miss for kanji: ${kanji}`);
+  // -------------------
+
   // --- OpenAI API Call Logic ---
   try {
-    const systemPrompt = `You are a Japanese learning assistant. You will receive one or more kanji and must respond with structured JSON. Output only valid JSON with no extra text. Follow the schema provided in the user prompt example. Ensure all readings are in romaji. Only include compound words that contain the input kanji as one of the written characters in the compound (e.g., if the input is 器, valid compounds include 食器 and 器官, but NOT 道具, since 器 is not in the written form). Only use the base kanji in the example sentences (no compound words). The response must be valid JSON.`;
+    const systemPrompt = `You are a Japanese learning assistant. Your primary task is to provide detailed information for the given kanji character(s).
+Strictly adhere to the following:
+1. Respond ONLY with a single, valid JSON object. Do not include any surrounding text, explanations, or markdown.
+2. The JSON structure must exactly match the schema provided in the user prompt.
+3. All Japanese readings (for the kanji itself, compound words, and example sentences) must be in romaji.
+4. Compound words listed must contain the input kanji as one of the characters in their written form (e.g., for the input '器', valid compounds include '食器' and '器官', but NOT '道具' because '器' is not part of its written form).
+5. Example sentences must exclusively use the base input kanji(s) and not any compound words.`;
 
     const userPrompt = `Input kanji: ${kanji}\n\nReturn ONLY JSON in this exact format (do not add any explanation or markdown):\n{\n  "kanji": "${kanji}",\n  "reading": "<romaji reading>",\n  "meaning": "<meaning>",\n  "compound_words": [\n    { "word": "<compound word 1>", "reading": "<reading 1>", "meaning": "<meaning 1>" },\n    { "word": "<compound word 2>", "reading": "<reading 2>", "meaning": "<meaning 2>" },\n    { "word": "<compound word 3>", "reading": "<reading 3>", "meaning": "<meaning 3>" },\n    { "word": "<compound word 4>", "reading": "<reading 4>", "meaning": "<meaning 4>" },\n    { "word": "<compound word 5>", "reading": "<reading 5>", "meaning": "<meaning 5>" }\n  ],\n  "example_sentences": {\n    "easy": {\n      "japanese": "<easy japanese sentence>",\n      "reading": "<easy romaji reading>",\n      "translation": "<easy translation>"\n    },\n    "medium": {\n      "japanese": "<medium japanese sentence>",\n      "reading": "<medium romaji reading>",\n      "translation": "<medium translation>"\n    },\n    "hard": {\n      "japanese": "<hard japanese sentence>",\n      "reading": "<hard romaji reading>",\n      "translation": "<hard translation>"\n    }\n  }\n}`;
 
@@ -131,6 +151,9 @@ router.post('/kanji', async (req: Request, res: Response) => {
     try {
       const parsedData = JSON.parse(jsonContent);
       console.log("Parsed data successfully.");
+      // Store successful response in cache
+      kanjiCache.set(kanji, parsedData);
+      console.log(`Stored response for ${kanji} in cache.`);
       res.status(200).json(parsedData);
     } catch (parseError) {
       console.error("Error parsing JSON from OpenAI:", parseError);
