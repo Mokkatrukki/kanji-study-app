@@ -1,23 +1,25 @@
 # Kanji Study Helper
 
-A web application that helps users study Japanese Kanji by generating relevant information using the OpenAI API. Users can input one or more Kanji characters, and the app provides readings, meanings, compound words, and example sentences at different difficulty levels.
+A web application that helps users study Japanese Kanji by generating relevant information from various public APIs. Users can input one or more Kanji characters, and the app provides readings, meanings, compound words, and example sentences.
 
 ## Goal
 
-The primary goal is to provide a simple interface for users to quickly generate study materials for specific Kanji characters leveraging the power of AI.
+The primary goal is to provide a simple interface for users to quickly generate study materials for specific Kanji characters by leveraging free and open APIs.
 
 ## Features
 
 *   Input 1-3 Kanji characters.
-*   Fetches structured data from the OpenAI API (via a secure backend).
+*   Fetches structured data via a secure backend from:
+    *   `kanjiapi.dev` for Kanji details (readings, meanings) and compound words.
+    *   `Tatoeba.org` for example sentences.
 *   Displays:
     *   Kanji character(s)
-    *   Romaji reading(s)
+    *   Primary Kana reading(s)
     *   English meaning(s)
-    *   A list of relevant compound words (with readings and meanings).
-    *   Example sentences using the base Kanji (Easy, Medium, Hard levels) with readings and translations.
+    *   A list of relevant compound words (with Kana readings and English meanings), filtered for relevance and length.
+    *   Up to 5 example sentences (Japanese, Kana reading if available, and English translation).
 *   Input validation on both frontend and backend (character type, length).
-*   API endpoint (`/api/kanji`) is rate-limited to prevent abuse.
+*   API endpoint (`/api/kanji`) for fetching Kanji data.
 *   Basic loading indicator during API calls.
 *   Swagger API documentation available at `/api-docs`.
 
@@ -25,7 +27,9 @@ The primary goal is to provide a simple interface for users to quickly generate 
 
 *   **Backend:** Node.js, Express.js, TypeScript
 *   **Frontend:** EJS (Server-Side Templates), Vanilla TypeScript, Tailwind CSS
-*   **AI Service:** OpenAI API (gpt-3.5-turbo or newer)
+*   **Data Sources:**
+    *   `kanjiapi.dev` (for Kanji information and words)
+    *   `Tatoeba.org` API (for example sentences)
 *   **Containerization:** Docker
 
 ## Project Structure
@@ -40,7 +44,7 @@ The project has been refactored into a single, consolidated application where th
 ├── tailwind.config.js      # Tailwind CSS configuration
 ├── tsconfig.client.json    # TypeScript config for client-side code
 ├── tsconfig.server.json    # TypeScript config for server-side code
-├── .env                    # Environment variables (contains API key - *not committed*)
+├── .env                    # For any other environment variables (e.g., PORT) - *kanjiapi.dev and Tatoeba are public APIs and don't require keys for this app's usage.*
 ├── .gitignore
 ├── src/                    # Source code directory
 │   ├── public/             # Static assets served directly
@@ -57,13 +61,14 @@ The project has been refactored into a single, consolidated application where th
 
 ## Environment Variables
 
-The application requires an OpenAI API key to function. Create a `.env` file in the project root with the following content:
+This application's core Kanji lookup functionality now uses public APIs (`kanjiapi.dev`, `Tatoeba.org`) that do not require API keys for the current usage.
 
+If you have other parts of your application or deployment setups (like Fly.io secrets for other services) that require environment variables, you can still use a `.env` file. For example:
 ```plaintext
-OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+PORT=3001
+# OTHER_API_KEY=YOUR_KEY_HERE
 ```
-
-Replace `YOUR_OPENAI_API_KEY_HERE` with your actual key. This file is listed in `.gitignore` and should not be committed to version control.
+The `OPENAI_API_KEY` is no longer directly used by the `/api/kanji` endpoint.
 
 ## Getting Started (Local Development)
 
@@ -72,7 +77,7 @@ Replace `YOUR_OPENAI_API_KEY_HERE` with your actual key. This file is listed in 
     ```bash
     npm install
     ```
-3.  **Create the `.env` file** in the project root and add your `OPENAI_API_KEY` (see above).
+3.  **(Optional) Create the `.env` file** in the project root if you need to set variables like `PORT`.
 4.  **Run the development server:**
     ```bash
     npm run dev
@@ -107,52 +112,70 @@ This application is configured for easy deployment to Fly.io using the included 
 
 1.  Install `flyctl`.
 2.  Log in: `fly auth login`.
-3.  Set the OpenAI API key as a secret:
+3.  If you have other secrets to set (e.g., for services not directly used by this Kanji API but part of a larger app), you can set them:
     ```bash
-    fly secrets set OPENAI_API_KEY="YOUR_ACTUAL_OPENAI_KEY"
+    fly secrets set YOUR_SECRET_NAME="ITS_VALUE"
     ```
+    The `OPENAI_API_KEY` previously mentioned for this app is no longer a direct dependency for the Kanji data fetching.
 4.  Launch the app: `fly launch` (follow prompts, it should detect the `Dockerfile`).
 5.  Deploy (if needed): `fly deploy`.
 
 # Kanji Study Helper - API Backend
 
-This backend service provides an API endpoint to fetch detailed information about Japanese Kanji characters. It uses a hybrid approach, primarily fetching data from Jisho.org via the `unofficial-jisho-api` for speed and falling back to OpenAI for more comprehensive data or specific needs like example sentences.
+This backend service provides an API endpoint (`/api/kanji`) to fetch detailed information about Japanese Kanji characters. It now primarily uses `kanjiapi.dev` for core Kanji information and compound words, and `Tatoeba.org` for example sentences.
 
 ## Core Functionality
 
-The main endpoint `/api/kanji` (POST request) accepts a Kanji character and returns a JSON object with its details.
+The main endpoint `/api/kanji` (POST request) accepts a Kanji character (or multiple, though current implementation focuses on the first for detailed lookup) and returns a JSON object with its details.
 
-## Integration with `unofficial-jisho-api`
+## Data Fetching Strategy
 
-To provide fast and accurate dictionary-like information, the backend integrates the `unofficial-jisho-api` npm package.
+### 1. Kanji Details (via `kanjiapi.dev`)
 
-### Primary Data Fetching
+When a request for a Kanji is received, the API first fetches core details for the input Kanji:
 
-When a request for a Kanji is received, the API first attempts to fetch data using the `unofficial-jisho-api`.
+*   **API Called:** `https://kanjiapi.dev/v1/kanji/{character}`
+*   **Data Extracted:**
+    *   **Kanji Character:** The queried Kanji itself (from `response.kanji`).
+    *   **Primary Reading (Kana):** The first Kun'yomi reading if available, otherwise the first On'yomi reading (from `response.kun_readings` or `response.on_readings`).
+    *   **Meaning:** The first English meaning provided (from `response.meanings[0]`).
 
-*   **Function Called:** `jisho.searchForKanji(kanjiCharacter)`
-    *   This function from the `unofficial-jisho-api` is used to get core details about the specified Kanji.
+### 2. Compound Words (via `kanjiapi.dev`)
 
-*   **Data Extracted from `searchForKanji`:**
-    *   **Kanji Character:** The queried Kanji itself (from `result.query`).
-    *   **Primary Reading:** The first Kun'yomi reading if available, otherwise the first On'yomi reading (from `result.kunyomi[0]` or `result.onyomi[0]`)
-        *   *Note: These readings are in Kana (e.g., ひ, び, ほ).*
-    *   **Meaning:** The English meaning of the Kanji (from `result.meaning`).
-    *   **Compound Words:** A list of up to 5 compound words containing the Kanji. These are derived by processing `result.kunyomiExamples` and `result.onyomiExamples`.
-        *   Each compound word includes:
-            *   `word`: The compound word in Japanese (e.g., "日本語").
-            *   `reading`: The Kana reading of the compound word (e.g., "にほんご").
-            *   `meaning`: The English meaning of the compound word.
-        *   *Note: The readings for compound words are also in Kana.*
+Next, it fetches associated words for the Kanji:
 
-### Example Sentences (via OpenAI)
+*   **API Called:** `https://kanjiapi.dev/v1/words/{character}`
+*   **Data Processing & Filtering:**
+    *   The API returns a list of dictionary entries. Each entry can have multiple `variants` (written forms/readings) and `meanings` (with glosses).
+    *   The backend processes these to extract compound words:
+        *   `word`: The written form of the variant (e.g., "自動車").
+        *   `reading`: The pronounced form in Kana (e.g., "じどうしゃ").
+        *   `meaning`: The first English gloss for the word.
+    *   **Filtering for Relevance:** To provide a concise and relevant list (up to 5 compounds), several filters are applied:
+        1.  The compound must include the original input Kanji in its written form.
+        2.  The compound must not be identical to the input Kanji character itself.
+        3.  The written form of the compound is limited to a maximum of 4 characters to favor shorter, common words.
+        4.  The compound must have at least one "priority" tag associated with its variant (indicating some level of commonness or dictionary importance).
+        5.  The compound's primary meaning should not be identical (case-insensitive) to the primary meaning of the input Kanji.
+    *   **Priority System:** Words with preferred priority tags (e.g., `news1`, `news2`, `nf01-nf15` indicating high frequency) are collected first. If fewer than 5 are found, the list is supplemented by other words that have any priority tag, until up to 5 compounds are selected.
 
-While `unofficial-jisho-api` has methods for example sentences, this backend currently uses OpenAI to generate example sentences (`easy`, `medium`, `hard`) that specifically use the base input Kanji (not compounds) and provide Romaji readings. This is done via a separate, parallel API call to OpenAI (`fetchExampleSentencesFromOpenAI`).
+### 3. Example Sentences (via Tatoeba.org)
 
-### Fallback Mechanism
+Finally, example sentences are fetched:
 
-If the `jisho.searchForKanji()` call fails to find the Kanji or encounters an error, the system falls back to a more comprehensive data fetch from the OpenAI API (`fetchKanjiDataFromOpenAI_Full`), which provides all required fields including Romaji readings and example sentences as per a detailed prompt.
+*   **API Called:** `https://api.tatoeba.org/unstable/sentences`
+*   **Parameters Used:**
+    *   `lang=jpn` (source language is Japanese)
+    *   `q={kanji}` (query for the input Kanji)
+    *   `trans:lang=eng` (must have an English translation)
+    *   `trans:is_direct=yes` (prefer direct translations)
+    *   `limit=5` (fetch up to 5 sentences)
+    *   `sort=relevance` (sort results by relevance)
+*   **Data Extracted (for each of up to 5 sentences):**
+    *   `japanese`: The Japanese sentence text.
+    *   `reading`: A Kana reading of the sentence, if available from transcriptions (this is a simplified extraction).
+    *   `translation`: The first direct English translation found (falls back to any English translation if no direct one is present).
 
 ## Caching
 
-All successfully fetched data (whether from Jisho, OpenAI, or a combination) is cached to improve response times for subsequent requests for the same Kanji. 
+All successfully fetched and processed data for a given Kanji is cached for 1 hour to improve response times for subsequent requests and reduce load on external APIs. 
