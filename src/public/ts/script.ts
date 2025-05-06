@@ -101,9 +101,30 @@ async function handleGenerateClick() {
 }
 
 function displayResults(data: KanjiApiResponse) {
+    // Select and Hide "Example Sentences" section title
+    const sentencesHeader = document.querySelector('#sentences-card h3') as HTMLElement | null;
+    if (sentencesHeader) {
+        sentencesHeader.classList.add('hidden');
+    }
+
+    // Select and Modify "Compound Words" section title
+    const compoundsHeader = document.querySelector('#compounds-card h3') as HTMLElement | null;
+    if (compoundsHeader) {
+        compoundsHeader.textContent = 'Key Vocabulary'; // New text
+        compoundsHeader.className = 'text-lg font-medium text-gray-700 mb-3'; // New classes for smaller size
+    }
+
     resultKanji.textContent = data.kanji;
+    // Clear existing classes and add new ones for main Kanji
+    resultKanji.className = 'text-7xl font-bold text-gray-800 text-center mb-1'; // Larger, bolder, centered
+
     resultReading.textContent = data.reading;
+    // Clear existing classes and add new ones for reading
+    resultReading.className = 'text-2xl text-gray-700 text-center mb-1'; // Sub-heading style, centered
+
     resultMeaning.textContent = data.meaning;
+    // Clear existing classes and add new ones for meaning
+    resultMeaning.className = 'text-xl text-gray-600 text-center mb-4'; // Sub-heading style, centered, with margin
 
     // Populate compound words
     compoundsList.innerHTML = ''; // Clear previous results
@@ -122,13 +143,15 @@ function displayResults(data: KanjiApiResponse) {
     if (data.example_sentences && data.example_sentences.length > 0) {
         data.example_sentences.forEach(sentence => {
             const div = document.createElement('div');
-            div.className = 'mb-4 pt-2 pb-2 border-b border-gray-200'; // Simpler container, more like a list item with a bottom border
+            // Remove border, increase bottom margin for separation
+            div.className = 'mb-6 pt-2 pb-2'; 
 
-            let sentenceHTML = `<p class="text-xl font-medium text-gray-800">${sentence.japanese}</p>`;
+            // Increase Japanese sentence text size
+            let sentenceHTML = `<p class="text-2xl font-medium text-gray-800">${sentence.japanese}</p>`;
             if (sentence.reading) {
                 sentenceHTML += `<p class="text-md text-gray-600">${sentence.reading}</p>`;
             }
-            sentenceHTML += `<p class="text-sm text-gray-500 italic mt-1">${sentence.translation}</p>`;
+            sentenceHTML += `<p class="text-sm text-gray-400 italic mt-1">${sentence.translation}</p>`;
             
             div.innerHTML = sentenceHTML;
             sentencesList.appendChild(div);
