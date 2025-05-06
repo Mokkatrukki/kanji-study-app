@@ -1,12 +1,16 @@
 import { Router, Request, Response } from 'express';
 import OpenAI from 'openai';
 import NodeCache from 'node-cache';
+import JishoAPI from 'unofficial-jisho-api';
 
 const router = Router();
 
 // Initialize cache with a default TTL (e.g., 1 hour = 3600 seconds)
 // and checkperiod (e.g., 10 minutes = 600 seconds) to automatically delete expired items
 const kanjiCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
+
+// Initialize Jisho API client
+const jisho = new JishoAPI();
 
 // --- Initialize OpenAI Client ---
 // Ensure OPENAI_API_KEY is set in your root .env file
@@ -47,7 +51,8 @@ const openai = new OpenAI({
  *                    example: "車"
  *                  reading:
  *                    type: string
- *                    example: "kuruma"
+ *                    description: Kana reading of the Kanji.
+ *                    example: "くるま"
  *                  meaning:
  *                    type: string
  *                    example: "car"
@@ -57,16 +62,15 @@ const openai = new OpenAI({
  *                      type: object
  *                      properties:
  *                        word: { type: string }
- *                        reading: { type: string }
+ *                        reading: { type: string, description: "Kana reading of the compound word." }
  *                        meaning: { type: string }
  *                    example:
- *                      - { word: "電車", reading: "densha", meaning: "train (electric car)" }
+ *                      - { word: "電車", reading: "でんしゃ", meaning: "train (electric car)" }
+ *                      - { word: "自動車", reading: "じどうしゃ", meaning: "automobile" }
  *                  example_sentences:
- *                    type: object
- *                    properties:
- *                      easy: { type: object, properties: { japanese: { type: string }, reading: { type: string }, translation: { type: string } } }
- *                      medium: { type: object, properties: { japanese: { type: string }, reading: { type: string }, translation: { type: string } } }
- *                      hard: { type: object, properties: { japanese: { type: string }, reading: { type: string }, translation: { type: string } } }
+ *                    type: string
+ *                    description: Placeholder for example sentences (not provided by this version).
+ *                    example: "-"
  *       400:
  *         description: Invalid input.
  *         content:
@@ -75,16 +79,16 @@ const openai = new OpenAI({
  *               type: object
  *               properties:
  *                 error: { type: string, example: "Invalid input: \"kanji\" field is required..." }
- *       429:
- *         description: Too many requests (Rate Limit Exceeded).
+ *       404:
+ *         description: Kanji not found by the Jisho API.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 error: { type: string, example: "Too many requests from this IP..." }
+ *                 error: { type: string, example: "Kanji not found." }
  *       500:
- *         description: Internal server error or error fetching from OpenAI.
+ *         description: Internal server error or error fetching from Jisho API.
  *         content:
  *           application/json:
  *             schema:
@@ -119,57 +123,60 @@ router.post('/kanji', async (req: Request, res: Response) => {
   console.log(`Cache miss for kanji: ${kanji}`);
   // -------------------
 
-  // --- OpenAI API Call Logic ---
+  // --- Jisho API Call Logic ---
   try {
-    const systemPrompt = `You are a Japanese learning assistant. Your primary task is to provide detailed information for the given kanji character(s).
-Strictly adhere to the following:
-1. Respond ONLY with a single, valid JSON object. Do not include any surrounding text, explanations, or markdown.
-2. The JSON structure must exactly match the schema provided in the user prompt.
-3. All Japanese readings (for the kanji itself, compound words, and example sentences) must be in romaji.
-4. Compound words listed must contain the input kanji as one of the characters in their written form (e.g., for the input '器', valid compounds include '食器' and '器官', but NOT '道具' because '器' is not part of its written form).
-5. Example sentences must exclusively use the base input kanji(s) and not any compound words.`;
+    console.log(`Attempting to fetch Kanji data from Jisho for: ${kanji}`);
+    const jishoData = await jisho.searchForKanji(kanji);
 
-    const userPrompt = `Input kanji: ${kanji}\n\nReturn ONLY JSON in this exact format (do not add any explanation or markdown):\n{\n  "kanji": "${kanji}",\n  "reading": "<romaji reading>",\n  "meaning": "<meaning>",\n  "compound_words": [\n    { "word": "<compound word 1>", "reading": "<reading 1>", "meaning": "<meaning 1>" },\n    { "word": "<compound word 2>", "reading": "<reading 2>", "meaning": "<meaning 2>" },\n    { "word": "<compound word 3>", "reading": "<reading 3>", "meaning": "<meaning 3>" },\n    { "word": "<compound word 4>", "reading": "<reading 4>", "meaning": "<meaning 4>" },\n    { "word": "<compound word 5>", "reading": "<reading 5>", "meaning": "<meaning 5>" }\n  ],\n  "example_sentences": {\n    "easy": {\n      "japanese": "<easy japanese sentence>",\n      "reading": "<easy romaji reading>",\n      "translation": "<easy translation>"\n    },\n    "medium": {\n      "japanese": "<medium japanese sentence>",\n      "reading": "<medium romaji reading>",\n      "translation": "<medium translation>"\n    },\n    "hard": {\n      "japanese": "<hard japanese sentence>",\n      "reading": "<hard romaji reading>",\n      "translation": "<hard translation>"\n    }\n  }\n}`;
+    if (jishoData && jishoData.found) {
+      console.log(`Jisho data found for: ${kanji}`);
+      
+      const mainKanjiMeaning = jishoData.meaning ? jishoData.meaning.toLowerCase() : null;
 
-    console.log("Sending request to OpenAI...");
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
-    });
+      const primaryReading = (jishoData.kunyomi && jishoData.kunyomi.length > 0 ? jishoData.kunyomi[0] : null) ||
+                           (jishoData.onyomi && jishoData.onyomi.length > 0 ? jishoData.onyomi[0] : null) ||
+                           "N/A";
 
-    console.log("Received response from OpenAI.");
-    const jsonContent = completion.choices[0]?.message?.content;
+      const combinedExamples = [
+        ...(jishoData.kunyomiExamples || []),
+        ...(jishoData.onyomiExamples || [])
+      ];
 
-    if (!jsonContent) {
-      throw new Error("No content received from OpenAI.");
-    }
+      const compound_words = combinedExamples
+        .filter(ex => {
+          const isNotInputKanjiItself = ex.example !== kanji;
+          const exampleMeaning = ex.meaning ? ex.meaning.toLowerCase() : null;
+          // Keep if meaning is different from main Kanji, or if meanings can't be compared (one is null)
+          const isMeaningDifferentOrUndefined = !mainKanjiMeaning || !exampleMeaning || exampleMeaning !== mainKanjiMeaning;
+          return isNotInputKanjiItself && isMeaningDifferentOrUndefined;
+        })
+        .map(ex => ({
+          word: ex.example,
+          reading: ex.reading, // Kana reading from Jisho
+          meaning: ex.meaning
+        }))
+        .slice(0, 5); // Limit to 5 compounds
 
-    try {
-      const parsedData = JSON.parse(jsonContent);
-      console.log("Parsed data successfully.");
-      // Store successful response in cache
-      kanjiCache.set(kanji, parsedData);
-      console.log(`Stored response for ${kanji} in cache.`);
-      res.status(200).json(parsedData);
-    } catch (parseError) {
-      console.error("Error parsing JSON from OpenAI:", parseError);
-      console.error("Raw OpenAI content:", jsonContent);
-      res.status(500).json({ error: "Failed to parse response from AI service.", raw_content: jsonContent });
-    }
+      const responseData = {
+        kanji: jishoData.query || kanji,
+        reading: primaryReading,
+        meaning: jishoData.meaning || "N/A",
+        compound_words: compound_words,
+        example_sentences: "-" // Added placeholder for example sentences
+      };
 
-  } catch (error) {
-    console.error("Error calling OpenAI API:", error);
-    if (error instanceof OpenAI.APIError) {
-      res.status(error.status || 500).json({ error: `OpenAI API Error: ${error.name}`, message: error.message });
+      kanjiCache.set(kanji, responseData);
+      console.log(`Stored Jisho response for ${kanji} in cache.`);
+      return res.status(200).json(responseData);
     } else {
-      res.status(500).json({ error: "An unexpected error occurred while contacting the AI service." });
+      console.log(`Kanji not found on Jisho for: ${kanji}.`);
+      return res.status(404).json({ error: `Kanji "${kanji}" not found by Jisho API.` });
     }
+  } catch (jishoError) {
+    console.error(`Error fetching from Jisho for ${kanji}:`, jishoError);
+    return res.status(500).json({ error: "Error fetching data from Jisho API.", details: jishoError instanceof Error ? jishoError.message : String(jishoError) });
   }
-  // ----------------------------
+  // -------------------------
 });
 
 export default router; 

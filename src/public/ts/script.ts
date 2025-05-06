@@ -16,11 +16,7 @@ type KanjiApiResponse = {
     reading: string;
     meaning: string;
     compound_words: CompoundWord[];
-    example_sentences: {
-        easy: ExampleSentence;
-        medium: ExampleSentence;
-        hard: ExampleSentence;
-    };
+    example_sentences: string;
 };
 
 // --- DOM Element Selection ---
@@ -104,31 +100,35 @@ function displayResults(data: KanjiApiResponse) {
 
     // Populate compound words
     compoundsList.innerHTML = ''; // Clear previous results
-    data.compound_words.forEach(cw => {
-        const li = document.createElement('li');
-        li.innerHTML = `<strong>${cw.word} (${cw.reading}):</strong> ${cw.meaning}`;
-        compoundsList.appendChild(li);
-    });
+    if (data.compound_words && data.compound_words.length > 0) {
+        data.compound_words.forEach(cw => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${cw.word} (${cw.reading}):</strong> ${cw.meaning}`;
+            compoundsList.appendChild(li);
+        });
+    } else {
+        compoundsList.innerHTML = '<li>No compound words found.</li>';
+    }
 
-    // Populate example sentences
+    // Display example sentences placeholder
     sentencesList.innerHTML = ''; // Clear previous results
-    const levels: ('easy' | 'medium' | 'hard')[] = ['easy', 'medium', 'hard'];
-    levels.forEach(level => {
-        const sentenceData = data.example_sentences[level];
-        const div = document.createElement('div');
-        const levelCapitalized = level.charAt(0).toUpperCase() + level.slice(1);
-        let levelColor = 'text-green-700';
-        if (level === 'medium') levelColor = 'text-yellow-700';
-        if (level === 'hard') levelColor = 'text-red-700';
-
-        div.innerHTML = `
-            <h4 class="font-semibold text-lg ${levelColor}">${levelCapitalized}</h4>
-            <p class="text-xl mt-1 font-medium">${sentenceData.japanese}</p>
-            <p class="text-md text-gray-600">${sentenceData.reading}</p>
-            <p class="text-sm text-gray-500 italic">${sentenceData.translation}</p>
-        `;
-        sentencesList.appendChild(div);
-    });
+    if (data.example_sentences === "-") {
+        const p = document.createElement('p');
+        p.textContent = "Example sentences are not available.";
+        p.className = "text-gray-500 italic";
+        sentencesList.appendChild(p);
+    } else if (typeof data.example_sentences === 'string' && data.example_sentences.trim() !== '') {
+        // In case the API might send something other than "-" as a string
+        const p = document.createElement('p');
+        p.textContent = data.example_sentences;
+        sentencesList.appendChild(p);
+    } else {
+        // Fallback or if it somehow becomes an object again, or empty string
+        const p = document.createElement('p');
+        p.textContent = "Example sentences are not available.";
+        p.className = "text-gray-500 italic";
+        sentencesList.appendChild(p);
+    }
 
     showResults();
 }

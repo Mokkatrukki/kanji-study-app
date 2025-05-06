@@ -112,4 +112,47 @@ This application is configured for easy deployment to Fly.io using the included 
     fly secrets set OPENAI_API_KEY="YOUR_ACTUAL_OPENAI_KEY"
     ```
 4.  Launch the app: `fly launch` (follow prompts, it should detect the `Dockerfile`).
-5.  Deploy (if needed): `fly deploy`. 
+5.  Deploy (if needed): `fly deploy`.
+
+# Kanji Study Helper - API Backend
+
+This backend service provides an API endpoint to fetch detailed information about Japanese Kanji characters. It uses a hybrid approach, primarily fetching data from Jisho.org via the `unofficial-jisho-api` for speed and falling back to OpenAI for more comprehensive data or specific needs like example sentences.
+
+## Core Functionality
+
+The main endpoint `/api/kanji` (POST request) accepts a Kanji character and returns a JSON object with its details.
+
+## Integration with `unofficial-jisho-api`
+
+To provide fast and accurate dictionary-like information, the backend integrates the `unofficial-jisho-api` npm package.
+
+### Primary Data Fetching
+
+When a request for a Kanji is received, the API first attempts to fetch data using the `unofficial-jisho-api`.
+
+*   **Function Called:** `jisho.searchForKanji(kanjiCharacter)`
+    *   This function from the `unofficial-jisho-api` is used to get core details about the specified Kanji.
+
+*   **Data Extracted from `searchForKanji`:**
+    *   **Kanji Character:** The queried Kanji itself (from `result.query`).
+    *   **Primary Reading:** The first Kun'yomi reading if available, otherwise the first On'yomi reading (from `result.kunyomi[0]` or `result.onyomi[0]`)
+        *   *Note: These readings are in Kana (e.g., ひ, び, ほ).*
+    *   **Meaning:** The English meaning of the Kanji (from `result.meaning`).
+    *   **Compound Words:** A list of up to 5 compound words containing the Kanji. These are derived by processing `result.kunyomiExamples` and `result.onyomiExamples`.
+        *   Each compound word includes:
+            *   `word`: The compound word in Japanese (e.g., "日本語").
+            *   `reading`: The Kana reading of the compound word (e.g., "にほんご").
+            *   `meaning`: The English meaning of the compound word.
+        *   *Note: The readings for compound words are also in Kana.*
+
+### Example Sentences (via OpenAI)
+
+While `unofficial-jisho-api` has methods for example sentences, this backend currently uses OpenAI to generate example sentences (`easy`, `medium`, `hard`) that specifically use the base input Kanji (not compounds) and provide Romaji readings. This is done via a separate, parallel API call to OpenAI (`fetchExampleSentencesFromOpenAI`).
+
+### Fallback Mechanism
+
+If the `jisho.searchForKanji()` call fails to find the Kanji or encounters an error, the system falls back to a more comprehensive data fetch from the OpenAI API (`fetchKanjiDataFromOpenAI_Full`), which provides all required fields including Romaji readings and example sentences as per a detailed prompt.
+
+## Caching
+
+All successfully fetched data (whether from Jisho, OpenAI, or a combination) is cached to improve response times for subsequent requests for the same Kanji. 
