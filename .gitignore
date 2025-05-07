@@ -40,4 +40,8 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
-*.tmp 
+*.tmp
+
+# Ignore JS and JS.MAP files in src, but not in dist
+/src/**/*.js
+/src/**/*.js.map 
