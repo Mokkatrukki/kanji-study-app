@@ -46,7 +46,7 @@
             <div class="flex flex-col items-center">
                 <label for="kanji-input" class="block text-gray-700 text-sm font-bold mb-2">Kanji to Explore:</label>
                 <div class="flex w-full justify-center space-x-2">
-                    <input type="text" id="kanji-input" maxlength="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="例: 猫">
+                    <input type="text" id="kanji-input" maxlength="1" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="例: 猫">
                     <button id="generate-button" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline whitespace-nowrap">
                         Explore
                     </button>
@@ -62,14 +62,14 @@
             </div>
         </section>
 
+        <!-- Error Message Area (styled like a card) -->
+        <div id="error-message" class="bg-white shadow-md rounded px-8 pt-6 pb-8 hidden mb-6" role="alert">
+            <p class="text-2xl font-medium text-red-700 text-center mb-2">誤</p>
+            <p id="error-text" class="text-sm text-red-700 italic text-center"></p>
+        </div>
+
         <!-- Results Display Component (hidden initially) -->
         <section id="results-section" class="hidden">
-            <!-- Error Message Area (remains full width if shown) -->
-            <div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative hidden" role="alert">
-                <strong class="font-bold">Error:</strong>
-                <span id="error-text" class="block sm:inline">Something went wrong.</span>
-            </div>
-
             <!-- Inner Wrapper for Flex Layout -->
             <div class="space-y-6 md:space-y-0 md:flex md:space-x-6">
                 <!-- Left Column Wrapper (takes width on medium screens) -->

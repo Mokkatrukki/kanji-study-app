@@ -33,7 +33,7 @@ const randomKanjiButton = document.getElementById('random-kanji-button') as HTML
 const loadingIndicator = document.getElementById('loading-indicator') as HTMLDivElement;
 const resultsSection = document.getElementById('results-section') as HTMLElement;
 const errorMessageDiv = document.getElementById('error-message') as HTMLDivElement;
-const errorTextSpan = document.getElementById('error-text') as HTMLSpanElement;
+const errorTextElement = document.getElementById('error-text') as HTMLParagraphElement;
 
 // Result fields
 const resultKanji = document.getElementById('result-kanji') as HTMLElement;
@@ -79,8 +79,8 @@ async function handleGenerateClick() {
          showError('Input must contain only Kanji characters.');
          return;
      }
-    if (kanji.length > 3) {
-        showError('Please enter 1 to 3 Kanji characters.');
+    if (kanji.length > 1) {
+        showError('Please enter 1 Kanji character.');
         return;
     }
 
@@ -207,7 +207,7 @@ function showLoading(isLoading: boolean) {
 }
 
 function showError(message: string) {
-    errorTextSpan.textContent = message;
+    errorTextElement.textContent = message;
     errorMessageDiv.classList.remove('hidden');
     hideResults(); // Hide results section if error occurs
 }

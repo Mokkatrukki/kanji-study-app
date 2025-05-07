@@ -5,7 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import rateLimit from 'express-rate-limit';
 import swaggerSpec from './swagger'; // Import the swagger config
 import apiRoutes from './routes/api'; // Import API routes
-import fetch from 'node-fetch'; // Added for server-side fetch
+// import fetch from 'node-fetch'; // Removed to use global fetch
 
 // Load environment variables from .env file at the root
 dotenv.config();

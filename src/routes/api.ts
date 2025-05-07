@@ -102,8 +102,8 @@ router.post('/kanji', async (req: Request, res: Response) => {
   if (!kanjiRegex.test(kanji)) {
     return res.status(400).json({ error: 'Invalid input: Field must contain only Kanji characters.' });
   }
-  if (kanji.length === 0 || kanji.length > 3) {
-    return res.status(400).json({ error: 'Invalid input: Please provide 1 to 3 Kanji characters.' });
+  if (kanji.length === 0 || kanji.length > 1) {
+    return res.status(400).json({ error: 'Invalid input: Please provide 1 Kanji character.' });
   }
   // ------------------------
 
