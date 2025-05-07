@@ -196,6 +196,16 @@ function displayResults(data: KanjiApiResponse) {
 
 function showLoading(isLoading: boolean) {
     if (isLoading) {
+        loadingIndicator.innerHTML = `
+            <div class="text-center py-4">
+                <span class="text-2xl font-medium text-gray-800">ローディング</span>
+                <p class="text-sm text-gray-400 italic mt-1">
+                    loading...
+                </p>
+            </div>
+        `;
+        // Ensure #loading-indicator in your HTML is styled to center this, e.g.,
+        // by adding classes like "flex justify-center items-center" to it if it's not already.
         loadingIndicator.classList.remove('hidden');
         generateButton.disabled = true;
         generateButton.classList.add('opacity-50', 'cursor-not-allowed');

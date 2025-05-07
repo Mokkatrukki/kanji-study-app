@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom loading animation - REMOVED */
+
+
+/*
+.loading-dots-container .dot {
+    animation: blink 1.4s infinite both;
+}
+
+.loading-dots-container .dot-1 {
+    animation-delay: 0s;
+}
+
+.loading-dots-container .dot-2 {
+    animation-delay: 0.2s;
+}
+
+.loading-dots-container .dot-3 {
+    animation-delay: 0.4s;
+}
+
+@keyframes blink {
+    0%,
+    80%,
+    100% {
+        opacity: 0;
+    }
+    40% {
+        opacity: 1;
+    }
+}
+*/
