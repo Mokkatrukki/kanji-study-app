@@ -1,13 +1,8 @@
 import { Router, Request, Response } from 'express';
-import NodeCache from 'node-cache';
 // import JishoAPI from 'unofficial-jisho-api'; // Removed Jisho
 import { performance } from 'perf_hooks';
 
 const router = Router();
-
-// Initialize cache with a default TTL (e.g., 1 hour = 3600 seconds)
-// and checkperiod (e.g., 10 minutes = 600 seconds) to automatically delete expired items
-const kanjiCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 // const jisho = new JishoAPI(); // Removed Jisho
 
@@ -111,13 +106,6 @@ router.post('/kanji', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid input: Please provide 1 to 3 Kanji characters.' });
   }
   // ------------------------
-
-  const cachedData = kanjiCache.get(kanji);
-  if (cachedData) {
-    console.log(`Cache hit for kanji: ${kanji}`);
-    return res.status(200).json(cachedData);
-  }
-  console.log(`Cache miss for kanji: ${kanji}`);
 
   let mainKanjiDetails: { kanji?: string, reading?: string, meaning?: string, mainMeaningForFilter?: string } = {};
   let compoundWordsList: any[] = [];
@@ -246,7 +234,7 @@ router.post('/kanji', async (req: Request, res: Response) => {
   try {
     // const tatoebaStartTime = performance.now(); // Remove
     const tatoebaQuery = encodeURIComponent(kanji);
-    const tatoebaUrl = `https://api.tatoeba.org/unstable/sentences?lang=jpn&q=${tatoebaQuery}&trans:lang=eng&trans:is_direct=yes&limit=5&sort=relevance`;
+    const tatoebaUrl = `https://api.tatoeba.org/unstable/sentences?lang=jpn&q=${tatoebaQuery}&trans:lang=eng&trans:is_direct=yes&limit=5&sort=random&word_count=5-14`;
     // console.log(`Fetching example sentences from Tatoeba (api.tatoeba.org): ${tatoebaUrl}`); // Remove (can be verbose)
     const tatoebaResponse = await fetch(tatoebaUrl);
     // const tatoebaFetchEnd = performance.now(); // Remove
@@ -308,8 +296,6 @@ router.post('/kanji', async (req: Request, res: Response) => {
   }
   // -----------------------------------------
 
-  kanjiCache.set(kanji, responseData);
-  console.log(`Stored final response for ${kanji} in cache.`); // Keep this
   res.status(200).json(responseData);
 });
 
