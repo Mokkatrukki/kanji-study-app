@@ -49,6 +49,7 @@ hideError();   // Explicitly hide error on script load
 // --- Event Listeners ---
 generateButton.addEventListener('click', handleGenerateClick);
 randomKanjiButton.addEventListener('click', handleRandomKanjiClick);
+window.addEventListener('popstate', handlePopState); // Add listener for browser navigation
 
 // --- Functions ---
 
@@ -108,6 +109,13 @@ async function handleGenerateClick() {
 
         const data: KanjiApiResponse = await response.json();
         displayResults(data);
+
+        // Update URL if the current kanji is different from the one in the URL
+        const currentSearch = new URLSearchParams(window.location.search).get('kanji');
+        if (kanji !== currentSearch) {
+            const newUrl = `/?kanji=${encodeURIComponent(kanji)}`;
+            window.history.pushState({ kanji }, '', newUrl);
+        }
 
     } catch (error) {
         console.error('Fetch error:', error);
@@ -219,7 +227,42 @@ function hideResults() {
     // ... etc ...
 }
 
+// Function to handle popstate event (browser back/forward)
+async function handlePopState(event: PopStateEvent) {
+    if (event.state && event.state.kanji) {
+        kanjiInput.value = event.state.kanji;
+        await handleGenerateClick(); // Re-trigger search
+    } else {
+        // If there's no state, it might be the initial page or a non-app state
+        // Check URL directly
+        const params = new URLSearchParams(window.location.search);
+        const kanjiFromUrl = params.get('kanji');
+        if (kanjiFromUrl) {
+            kanjiInput.value = kanjiFromUrl;
+            await handleGenerateClick();
+        } else {
+            // If no kanji in URL, clear results and input
+            hideResults();
+            hideError();
+            kanjiInput.value = '';
+        }
+    }
+}
+
+// Function to check URL for Kanji on initial load
+async function checkUrlForKanji() {
+    const params = new URLSearchParams(window.location.search);
+    const kanjiFromUrl = params.get('kanji');
+    if (kanjiFromUrl) {
+        kanjiInput.value = kanjiFromUrl;
+        await handleGenerateClick();
+    }
+}
+
 console.log("Kanji Study App script loaded.");
+
+// Call checkUrlForKanji on initial load
+checkUrlForKanji();
 
 // Add an empty export to treat this file as a module, resolving top-level await issue
 export {}; 
