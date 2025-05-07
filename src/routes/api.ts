@@ -146,8 +146,14 @@ router.post('/kanji', async (req: Request, res: Response) => {
       (data.kun_readings && data.kun_readings.length > 0 ? data.kun_readings[0] : null) ||
       (data.on_readings && data.on_readings.length > 0 ? data.on_readings[0] : null) ||
       "N/A";
-    mainKanjiDetails.meaning = (data.meanings && data.meanings.length > 0 ? data.meanings[0] : "N/A");
-    mainKanjiDetails.mainMeaningForFilter = mainKanjiDetails.meaning?.toLowerCase();
+    
+    if (data.meanings && data.meanings.length > 0) {
+      mainKanjiDetails.meaning = data.meanings.join(', '); // Take all meanings
+      mainKanjiDetails.mainMeaningForFilter = data.meanings[0]?.toLowerCase(); // Still use the first for filtering
+    } else {
+      mainKanjiDetails.meaning = "N/A";
+      mainKanjiDetails.mainMeaningForFilter = undefined;
+    }
 
   } catch (error: any) {
     // const kanjiDetailFetchEnd = performance.now(); // Remove, or adjust error timing if still desired without success path logs
