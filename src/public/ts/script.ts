@@ -119,12 +119,12 @@ function displayResults(data: KanjiApiResponse) {
     resultKanji.className = 'text-7xl font-bold text-gray-800 text-center mb-1'; // Larger, bolder, centered
 
     resultReading.textContent = data.reading;
-    // Clear existing classes and add new ones for reading
-    resultReading.className = 'text-2xl text-gray-700 text-center mb-1'; // Sub-heading style, centered
+    // Adjust classes for Kanji reading to better match sentence hierarchy
+    resultReading.className = 'text-xl text-gray-600 text-center mb-1'; 
 
     resultMeaning.textContent = data.meaning;
-    // Clear existing classes and add new ones for meaning
-    resultMeaning.className = 'text-xl text-gray-600 text-center mb-4'; // Sub-heading style, centered, with margin
+    // Adjust classes for Kanji meanings to match sentence translation "whispering" style
+    resultMeaning.className = 'text-sm text-gray-500 italic text-center mb-4'; 
 
     // Populate compound words
     compoundsList.innerHTML = ''; // Clear previous results
