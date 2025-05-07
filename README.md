@@ -1,6 +1,7 @@
 # Kanji Study Helper
+Version: 1.0.0
 
-A web application that helps users study Japanese Kanji by generating relevant information from various public APIs. Users can input one or more Kanji characters, and the app provides readings, meanings, compound words, and example sentences.
+A web application that helps users study Japanese Kanji by generating relevant information from various public APIs. Users can input a single Kanji character, and the app provides readings, meanings, compound words, and example sentences.
 
 ## Goal
 
@@ -8,7 +9,7 @@ The primary goal is to provide a simple interface for users to quickly generate 
 
 ## Features
 
-*   Input 1-3 Kanji characters.
+*   Input 1 Kanji character.
 *   Fetches structured data via a secure backend from:
     *   `kanjiapi.dev` for Kanji details (readings, meanings) and compound words.
     *   `Tatoeba.org` for example sentences.
@@ -48,10 +49,14 @@ The project has been refactored into a single, consolidated application where th
 ├── .gitignore
 ├── src/                    # Source code directory
 │   ├── public/             # Static assets served directly
-│   │   ├── ts/             # Client-side TypeScript source (script.ts)
-│   │   └── styles/         # Input CSS for Tailwind (input.css)
+│   │   ├── images/         # Public images
+│   │   └── ts/             # Client-side TypeScript source
+│   │       ├── data/       # Client-side data files (e.g., kanji lists)
+│   │       └── script.ts
 │   ├── routes/             # API route definitions
 │   │   └── api.ts          # Handles /api/* routes (e.g., /api/kanji)
+│   ├── styles/             # Input CSS for Tailwind (input.css)
+│   │   └── input.css
 │   ├── views/              # EJS template files
 │   │   └── index.ejs       # Main HTML structure
 │   ├── server.ts           # Express application setup and entry point
@@ -61,14 +66,14 @@ The project has been refactored into a single, consolidated application where th
 
 ## Environment Variables
 
-This application's core Kanji lookup functionality now uses public APIs (`kanjiapi.dev`, `Tatoeba.org`) that do not require API keys for the current usage.
+This application's core Kanji lookup functionality uses public APIs (`kanjiapi.dev`, `Tatoeba.org`) that do not require API keys.
 
-If you have other parts of your application or deployment setups (like Fly.io secrets for other services) that require environment variables, you can still use a `.env` file. For example:
+If you have other parts of your application or deployment setups (like Fly.io secrets for other services not related to Kanji lookup) that require environment variables, you might still use a `.env` file for local configuration. For example, to set a custom port:
 ```plaintext
 PORT=3001
-# OTHER_API_KEY=YOUR_KEY_HERE
+# OTHER_CUSTOM_VARIABLE=YOUR_VALUE_HERE
 ```
-The `OPENAI_API_KEY` is no longer directly used by the `/api/kanji` endpoint.
+However, for basic local running, a `.env` file might not be strictly necessary if the default port (3001) is suitable.
 
 ## Getting Started (Local Development)
 
@@ -77,7 +82,7 @@ The `OPENAI_API_KEY` is no longer directly used by the `/api/kanji` endpoint.
     ```bash
     npm install
     ```
-3.  **(Optional) Create the `.env` file** in the project root if you need to set variables like `PORT`.
+3.  **(Optional) Create a `.env` file** in the project root if you need to set specific variables like `PORT` (e.g., `PORT=3002`). If not created, the application will use the default port (3001).
 4.  **Run the development server:**
     ```bash
     npm run dev
@@ -95,16 +100,22 @@ The `OPENAI_API_KEY` is no longer directly used by the `/api/kanji` endpoint.
 ## Running with Docker (Local)
 
 1.  Ensure Docker Desktop is running.
-2.  Make sure your `.env` file exists in the project root.
+2.  **(Optional) If you have a `.env` file** for custom configurations (like a different `PORT`), ensure it exists in the project root.
 3.  **Build the image:**
     ```bash
     docker build -t kanji-study-app:latest .
     ```
 4.  **Run the container:**
+    To run with default settings:
     ```bash
-    docker run --rm -p 3001:3001 --env-file .env -d --name kanji-app-container kanji-study-app:latest
+    docker run --rm -p 3001:3001 -d --name kanji-app-container kanji-study-app:latest
     ```
-5.  **Access the application:** `http://localhost:3001`
+    If you are using a `.env` file for custom variables (e.g., `PORT`):
+    ```bash
+    docker run --rm -p YOUR_CHOSEN_PORT:YOUR_CHOSEN_PORT --env-file .env -d --name kanji-app-container kanji-study-app:latest
+    ```
+    (Replace `YOUR_CHOSEN_PORT` with the port number you've set if it's different from 3001).
+5.  **Access the application:** `http://localhost:3001` (or your custom port).
 
 ## Deployment (Fly.io)
 
@@ -112,11 +123,10 @@ This application is configured for easy deployment to Fly.io using the included 
 
 1.  Install `flyctl`.
 2.  Log in: `fly auth login`.
-3.  If you have other secrets to set (e.g., for services not directly used by this Kanji API but part of a larger app), you can set them:
+3.  If you have secrets to set for services not directly used by this Kanji API (e.g., for other parts of a larger app or specific deployment needs), you can set them:
     ```bash
     fly secrets set YOUR_SECRET_NAME="ITS_VALUE"
     ```
-    The `OPENAI_API_KEY` previously mentioned for this app is no longer a direct dependency for the Kanji data fetching.
 4.  Launch the app: `fly launch` (follow prompts, it should detect the `Dockerfile`).
 5.  Deploy (if needed): `fly deploy`.
 
@@ -126,7 +136,7 @@ This backend service provides an API endpoint (`/api/kanji`) to fetch detailed i
 
 ## Core Functionality
 
-The main endpoint `/api/kanji` (POST request) accepts a Kanji character (or multiple, though current implementation focuses on the first for detailed lookup) and returns a JSON object with its details.
+The main endpoint `/api/kanji` (POST request) accepts a single Kanji character and returns a JSON object with its details.
 
 ## Data Fetching Strategy
 
@@ -170,12 +180,9 @@ Finally, example sentences are fetched:
     *   `trans:lang=eng` (must have an English translation)
     *   `trans:is_direct=yes` (prefer direct translations)
     *   `limit=5` (fetch up to 5 sentences)
-    *   `sort=relevance` (sort results by relevance)
+    *   `sort=random` (sort results randomly)
+    *   `word_count=5-14` (filters sentences to be between 5 and 14 words long)
 *   **Data Extracted (for each of up to 5 sentences):**
     *   `japanese`: The Japanese sentence text.
     *   `reading`: A Kana reading of the sentence, if available from transcriptions (this is a simplified extraction).
     *   `translation`: The first direct English translation found (falls back to any English translation if no direct one is present).
-
-## Caching
-
-All successfully fetched and processed data for a given Kanji is cached for 1 hour to improve response times for subsequent requests and reduce load on external APIs. 

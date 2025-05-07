@@ -1,10 +1,7 @@
 import { Router, Request, Response } from 'express';
-// import JishoAPI from 'unofficial-jisho-api'; // Removed Jisho
 import { performance } from 'perf_hooks';
 
 const router = Router();
-
-// const jisho = new JishoAPI(); // Removed Jisho
 
 /**
  * @swagger
@@ -23,7 +20,7 @@ const router = Router();
  *             properties:
  *               kanji:
  *                 type: string
- *                 description: The Kanji character(s) to get information for.
+ *                 description: The single Kanji character to get information for.
  *                 example: "車"
  *     responses:
  *       200:
@@ -73,7 +70,7 @@ const router = Router();
  *               properties:
  *                 error: { type: string, example: "Invalid input: \"kanji\" field is required..." }
  *       404:
- *         description: Kanji not found by the Jisho API.
+ *         description: Requested resource not found.
  *         content:
  *           application/json:
  *             schema:
@@ -110,24 +107,15 @@ router.post('/kanji', async (req: Request, res: Response) => {
   let mainKanjiDetails: { kanji?: string, reading?: string, meaning?: string, mainMeaningForFilter?: string } = {};
   let compoundWordsList: any[] = [];
 
-  // const overallKanjiApiTimingStart = performance.now(); // Remove
-
   // --- Fetch Kanji Details from kanjiapi.dev ---
   try {
     const kanjiDetailUrl = `https://kanjiapi.dev/v1/kanji/${encodedKanji}`;
-    // console.log(`Fetching Kanji details from ${kanjiDetailUrl}`); // Remove
-    // const kanjiDetailFetchStart = performance.now(); // Remove
     const kanjiDetailResponse = await fetch(kanjiDetailUrl);
-    // const kanjiDetailFetchEnd = performance.now(); // Remove
-    // console.log(`kanjiapi.dev (detail) fetch for "${kanji}" took ${(kanjiDetailFetchEnd - kanjiDetailFetchStart).toFixed(2)} ms.`); // Remove
 
     if (!kanjiDetailResponse.ok) {
       throw new Error(`kanjiapi.dev (detail) failed with status: ${kanjiDetailResponse.status}`);
     }
-    // const kanjiDetailParseStart = performance.now(); // Remove
     const data = await kanjiDetailResponse.json();
-    // const kanjiDetailParseEnd = performance.now(); // Remove
-    // console.log(`kanjiapi.dev (detail) parse for "${kanji}" took ${(kanjiDetailParseEnd - kanjiDetailParseStart).toFixed(2)} ms.`); // Remove
 
     mainKanjiDetails.kanji = data.kanji;
     mainKanjiDetails.reading = 
@@ -136,17 +124,15 @@ router.post('/kanji', async (req: Request, res: Response) => {
       "N/A";
     
     if (data.meanings && data.meanings.length > 0) {
-      mainKanjiDetails.meaning = data.meanings.join(', '); // Take all meanings
-      mainKanjiDetails.mainMeaningForFilter = data.meanings[0]?.toLowerCase(); // Still use the first for filtering
+      mainKanjiDetails.meaning = data.meanings.join(', ');
+      mainKanjiDetails.mainMeaningForFilter = data.meanings[0]?.toLowerCase();
     } else {
       mainKanjiDetails.meaning = "N/A";
       mainKanjiDetails.mainMeaningForFilter = undefined;
     }
 
   } catch (error: any) {
-    // const kanjiDetailFetchEnd = performance.now(); // Remove, or adjust error timing if still desired without success path logs
-    console.error(`Error fetching Kanji details from kanjiapi.dev for ${kanji}:`, error.message); // Keep error log
-    // console.log(`kanjiapi.dev (detail) call for "${kanji}" (failed) took at least ... ms before error.`); // Remove or simplify
+    console.error(`Error fetching Kanji details from kanjiapi.dev for ${kanji}:`, error.message);
     return res.status(500).json({ error: "Failed to fetch Kanji details.", details: error.message });
   }
   // -------------------------------------------
@@ -155,19 +141,12 @@ router.post('/kanji', async (req: Request, res: Response) => {
   if (mainKanjiDetails.kanji) {
     try {
       const wordsUrl = `https://kanjiapi.dev/v1/words/${encodedKanji}`;
-      // console.log(`Fetching compound words from ${wordsUrl}`); // Remove
-      // const wordsFetchStart = performance.now(); // Remove
       const wordsResponse = await fetch(wordsUrl);
-      // const wordsFetchEnd = performance.now(); // Remove
-      // console.log(`kanjiapi.dev (words) fetch for "${kanji}" took ... ms.`); // Remove
 
       if (!wordsResponse.ok) {
         throw new Error(`kanjiapi.dev (words) failed with status: ${wordsResponse.status}`);
       }
-      // const wordsParseStart = performance.now(); // Remove
       const wordsData = await wordsResponse.json(); 
-      // const wordsParseEnd = performance.now(); // Remove
-      // console.log(`kanjiapi.dev (words) parse for "${kanji}" took ... ms.`); // Remove
 
       if (Array.isArray(wordsData)) {
         const preferredCompounds: any[] = [];
@@ -213,14 +192,10 @@ router.post('/kanji', async (req: Request, res: Response) => {
         compoundWordsList = uniqueCompounds; 
       }
     } catch (error: any) {
-      // const wordsFetchEnd = performance.now(); // Remove or adjust
-      console.error(`Error fetching compound words from kanjiapi.dev for ${kanji}:`, error.message); // Keep error log
-      // console.log(`kanjiapi.dev (words) call for "${kanji}" (failed or partially failed) ... ms before error.`); // Remove or simplify
+      console.error(`Error fetching compound words from kanjiapi.dev for ${kanji}:`, error.message);
     }
   }
   // --------------------------------------------
-  // const overallKanjiApiTimingEnd = performance.now(); // Remove
-  // console.log(`kanjiapi.dev calls for "${kanji}" (total) took ... ms.`); // Remove
 
   const responseData = {
     kanji: mainKanjiDetails.kanji || kanji,
@@ -232,19 +207,12 @@ router.post('/kanji', async (req: Request, res: Response) => {
 
   // --- Fetch Example Sentences from Tatoeba --- 
   try {
-    // const tatoebaStartTime = performance.now(); // Remove
     const tatoebaQuery = encodeURIComponent(kanji);
     const tatoebaUrl = `https://api.tatoeba.org/unstable/sentences?lang=jpn&q=${tatoebaQuery}&trans:lang=eng&trans:is_direct=yes&limit=5&sort=random&word_count=5-14`;
-    // console.log(`Fetching example sentences from Tatoeba (api.tatoeba.org): ${tatoebaUrl}`); // Remove (can be verbose)
     const tatoebaResponse = await fetch(tatoebaUrl);
-    // const tatoebaFetchEnd = performance.now(); // Remove
-    // console.log(`Tatoeba API call for "${kanji}" (fetch) took ... ms.`); // Remove
 
     if (tatoebaResponse.ok) {
-      // const tatoebaParseStartTime = performance.now(); // Remove
       const tatoebaData = await tatoebaResponse.json();
-      // const tatoebaParseEndTime = performance.now(); // Remove
-      // console.log(`Tatoeba API call for "${kanji}" (json parsing) took ... ms.`); // Remove
 
       if (tatoebaData.data && tatoebaData.data.length > 0) {
         responseData.example_sentences = tatoebaData.data.map((item: any) => {
@@ -287,12 +255,10 @@ router.post('/kanji', async (req: Request, res: Response) => {
         }).filter((s: any) => s.japanese && s.translation);
       }
     } else {
-      console.warn(`Tatoeba API (unstable) request failed with status: ${tatoebaResponse.status}, body: ${await tatoebaResponse.text()}`); // Keep warning
+      console.warn(`Tatoeba API (unstable) request failed with status: ${tatoebaResponse.status}, body: ${await tatoebaResponse.text()}`);
     }
   } catch (tatoebaError: any) {
-    // const tatoebaEndTime = performance.now(); // Remove or adjust
-    console.error("Error fetching or parsing from Tatoeba API:", tatoebaError.message); // Keep error log
-    // console.log(`Tatoeba API call for "${kanji}" (failed) took at least ... ms before error.`); // Remove or simplify
+    console.error("Error fetching or parsing from Tatoeba API:", tatoebaError.message);
   }
   // -----------------------------------------
 
