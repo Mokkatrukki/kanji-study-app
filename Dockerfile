@@ -41,6 +41,10 @@ RUN npm run build:ts:server
 # This step is crucial as tsc doesn't copy non-TS files
 RUN npm run copy:views
 
+# Copy static images from src/public/images to dist/public/images
+RUN mkdir -p /app/dist/public/images && \
+    if [ -d /app/src/public/images ] && [ "$(ls -A /app/src/public/images)" ]; then cp -R /app/src/public/images/* /app/dist/public/images/; fi
+
 
 # ---- Stage 3: Final Production Image ----
 FROM node:20-slim

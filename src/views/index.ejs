@@ -4,9 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanji Study Helper</title>
-    <!-- Link to CSS served from the public directory -->
-    <link href="/css/output.css" rel="stylesheet">
+    <title>
+        <%= metaTitle %>
+    </title>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<%= metaUrl %>">
+    <meta property="og:title" content="<%= metaTitle %>">
+    <meta property="og:description" content="<%= metaDescription %>">
+    <% if (typeof metaImage !== 'undefined' && metaImage) { %>
+        <meta property="og:image" content="<%= metaImage %>">
+        <% } %>
+
+            <!-- Twitter -->
+            <meta property="twitter:card" content="summary_large_image">
+            <% /* or "summary" if no large image */ %>
+                <meta property="twitter:url" content="<%= metaUrl %>">
+                <meta property="twitter:title" content="<%= metaTitle %>">
+                <meta property="twitter:description" content="<%= metaDescription %>">
+                <% if (typeof metaImage !== 'undefined' && metaImage) { %>
+                    <meta property="twitter:image" content="<%= metaImage %>">
+                    <% } %>
+
+                        <!-- Link to CSS served from the public directory -->
+                        <link href="/css/output.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100 font-sans">

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Image Template</title>
+    <!-- Link to your existing compiled Tailwind CSS -->
+    <link href="/css/output.css" rel="stylesheet">
+    <style>
+        /* You can add specific styles here for the template if needed */
+        
+        body {
+            /* Ensures the background is visible if the card doesn't fill the viewport */
+            background-color: #f0f0f0;
+            /* A light gray, change as needed */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .preview-card-container {
+            /* Approximate 1200x630 aspect ratio for Open Graph */
+            /* Max width to keep it manageable on screen, but it can be wider for the actual image */
+            width: 100%;
+            max-width: 600px;
+            /* Adjust for easier screen viewing; actual image is 1200px wide */
+            aspect-ratio: 1200 / 630;
+            /* Simulate a card */
+            background-color: white;
+            /* Or your desired card background */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            /* Optional */
+            /* Flex layout to center content */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Center content vertically */
+            align-items: center;
+            /* Center content horizontally */
+            padding: 40px;
+            /* Adjust padding as needed */
+            text-align: center;
+            /* Match app's font if set globally, or set here */
+            /* font-family: 'YourAppFont', sans-serif; */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+    <div class="preview-card-container">
+        <!-- App Title -->
+        <h1 class="text-5xl font-bold text-gray-800 mb-4">
+            Kanji Study Helper
+        </h1>
+
+        <!-- Large Kanji Character (Placeholder) -->
+        <!-- You might want to use a very large font size or an actual image/SVG for the Kanji -->
+        <div class="text-9xl font-bold text-slate-700 my-8">
+            学
+        </div>
+
+        <!-- Tagline / Short Description -->
+        <p class="text-2xl text-gray-600 mt-4">
+            Explore Meanings, Readings & Compounds
+        </p>
+
+        <!-- Optional: Website URL (subtle) -->
+        <!--
+        <p class="text-sm text-gray-400 mt-10">
+            yourwebsite.com
+        </p>
+        -->
+    </div>
+
+    <!--
+    Instructions:
+    1. Make sure your development server is running (npm run dev) so that /css/output.css is accessible.
+    2. Open this HTML file directly in your browser (File > Open File).
+    3. Adjust the text, Tailwind classes, and inline styles in the <style> block or directly on elements.
+    4. Use this as a visual guide to create your 1200x630px image in a design tool.
+       You can take a screenshot of this page, but for best quality, recreate it in a design tool.
+    -->
+
+</body>
+
+</html>

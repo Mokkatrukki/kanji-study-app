@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import rateLimit from 'express-rate-limit';
 import swaggerSpec from './swagger'; // Import the swagger config
 import apiRoutes from './routes/api'; // Import API routes
+import fetch from 'node-fetch'; // Added for server-side fetch
 
 // Load environment variables from .env file at the root
 dotenv.config();
@@ -45,11 +46,71 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', apiRoutes);
 
 // Root route to render the main page using EJS
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
+  let metaTitle = "Kanji Study Helper";
+  let metaDescription = "Explore Japanese Kanji: meanings, readings, compounds, and example sentences. A simple tool to aid your Japanese language studies.";
+  // Construct the full URL for metaUrl
+  // Ensure req.protocol is correctly determined (e.g., behind a proxy)
+  // If you have a fixed domain, you might want to use that directly.
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  let metaUrl = `${protocol}://${host}${req.originalUrl}`;
+  
+  // Default image - replace with your actual image URL hosted in /public or elsewhere
+  // For example, if you have public/images/default-preview.png, it would be /images/default-preview.png
+  let metaImage = "/images/default-preview.png"; // Placeholder - MAKE SURE THIS IMAGE EXISTS or remove/change
+
+  const kanjiQuery = req.query.kanji as string;
+
+  if (kanjiQuery) {
+    try {
+      const encodedKanji = encodeURIComponent(kanjiQuery.substring(0, 1)); // Use only the first character for the meta preview
+      const kanjiDetailUrl = `https://kanjiapi.dev/v1/kanji/${encodedKanji}`;
+      
+      // console.log(`Fetching meta details from ${kanjiDetailUrl}`); // For debugging
+      const response = await fetch(kanjiDetailUrl);
+
+      if (response.ok) {
+        const data = await response.json() as any; // Type assertion for simplicity
+        const mainMeaning = data.meanings && data.meanings.length > 0 ? data.meanings[0] : '';
+        const primaryReading = (data.kun_readings && data.kun_readings.length > 0 ? data.kun_readings[0] : (data.on_readings && data.on_readings.length > 0 ? data.on_readings[0] : ''));
+        
+        if (data.kanji) {
+          metaTitle = `Kanji: ${data.kanji} - Kanji Study Helper`;
+          let descriptionParts: string[] = [];
+          if (primaryReading) descriptionParts.push(`Reading: ${primaryReading}`);
+          if (mainMeaning) descriptionParts.push(`Meaning: ${mainMeaning}`);
+          descriptionParts.push("Explore compounds and sentences.");
+          metaDescription = descriptionParts.join(' | ');
+          // Potentially set a dynamic metaImage here if you generate images per Kanji
+          // metaImage = `/images/kanji/${data.kanji}.png`; // Example
+        } else {
+          // Kanji character itself not found in response, use query or default
+          metaTitle = `Kanji: ${kanjiQuery} - Kanji Study Helper`;
+          metaDescription = `Find information about the Kanji "${kanjiQuery}" and related vocabulary on Kanji Study Helper.`;
+        }
+      } else {
+        // API error or Kanji not found, use a slightly more specific message
+        console.warn(`Meta fetch: kanjiapi.dev call for "${encodedKanji}" failed with status: ${response.status}`);
+        metaTitle = `Kanji: ${kanjiQuery} - Kanji Study Helper`;
+        metaDescription = `Information for Kanji "${kanjiQuery}" on Kanji Study Helper. External data could not be loaded.`;
+      }
+    } catch (error) {
+      console.error("Error fetching Kanji details for meta tags:", error);
+      // Fallback to a generic message if an error occurs during fetch
+      metaTitle = `Kanji: ${kanjiQuery} - Kanji Study Helper`;
+      metaDescription = `An error occurred while fetching details for Kanji "${kanjiQuery}". Please try exploring on the site.`;
+    }
+  }
+
   // Render the index.ejs template from the views directory
   res.render('index', {
-    // You can pass variables to your template here if needed
-    // Example: title: 'Kanji Study Helper'
+    metaTitle,
+    metaDescription,
+    metaUrl,
+    metaImage,
+    // any other variables your template might need from the original setup
+    // title: metaTitle, // If your template previously used a 'title' variable directly, ensure it's consistent
   });
 });
 
