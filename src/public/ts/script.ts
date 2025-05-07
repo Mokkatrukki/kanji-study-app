@@ -29,6 +29,7 @@ type KanjiApiResponse = {
 // --- DOM Element Selection ---
 const kanjiInput = document.getElementById('kanji-input') as HTMLInputElement;
 const generateButton = document.getElementById('generate-button') as HTMLButtonElement;
+const randomKanjiButton = document.getElementById('random-kanji-button') as HTMLButtonElement;
 const loadingIndicator = document.getElementById('loading-indicator') as HTMLDivElement;
 const resultsSection = document.getElementById('results-section') as HTMLElement;
 const errorMessageDiv = document.getElementById('error-message') as HTMLDivElement;
@@ -47,8 +48,23 @@ hideError();   // Explicitly hide error on script load
 
 // --- Event Listeners ---
 generateButton.addEventListener('click', handleGenerateClick);
+randomKanjiButton.addEventListener('click', handleRandomKanjiClick);
 
 // --- Functions ---
+
+// --- Import Kanji Lists ---
+import { allKanji } from './data/kanjiLists.js';
+
+async function handleRandomKanjiClick() {
+    if (allKanji && allKanji.length > 0) {
+        const randomIndex = Math.floor(Math.random() * allKanji.length);
+        kanjiInput.value = allKanji[randomIndex];
+        handleGenerateClick(); // Trigger the search with the new random kanji
+    } else {
+        showError('No Kanji available for random selection.');
+    }
+}
+
 async function handleGenerateClick() {
     const kanji = kanjiInput.value.trim();
 

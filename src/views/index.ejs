@@ -24,9 +24,12 @@
             <div class="flex flex-col items-center">
                 <label for="kanji-input" class="block text-gray-700 text-sm font-bold mb-2">Kanji to Explore:</label>
                 <div class="flex w-full justify-center space-x-2">
-                    <input type="text" id="kanji-input" maxlength="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="例: 猫" value="意">
+                    <input type="text" id="kanji-input" maxlength="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="例: 猫">
                     <button id="generate-button" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline whitespace-nowrap">
                         Explore
+                    </button>
+                    <button id="random-kanji-button" class="bg-white hover:bg-slate-700 text-slate-700 hover:text-white font-bold py-2 px-4 rounded border border-slate-700 focus:outline-none focus:shadow-outline whitespace-nowrap transition-colors duration-150">
+                        Random
                     </button>
                 </div>
                 <!-- Loading Indicator (hidden initially) -->
