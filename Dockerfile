@@ -10,7 +10,7 @@ COPY tailwind.config.js ./
 COPY tsconfig.client.json ./
 # Copy source files for client build
 COPY src/styles/input.css ./src/styles/
-COPY src/public/ts/script.ts ./src/public/ts/
+COPY src/public/ts ./src/public/ts/
 COPY src/views ./src/views
 
 # Install ALL dependencies (including dev needed for build)
