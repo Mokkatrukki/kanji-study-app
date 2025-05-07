@@ -131,7 +131,11 @@ function displayResults(data: KanjiApiResponse) {
     if (data.compound_words && data.compound_words.length > 0) {
         data.compound_words.forEach(cw => {
             const li = document.createElement('li');
-            li.innerHTML = `<strong>${cw.word} (${cw.reading}):</strong> ${cw.meaning}`;
+            li.innerHTML = `
+                <span class="text-2xl font-medium text-gray-800">${cw.word}</span>
+                <span class="text-sm text-gray-600 ml-1">(${cw.reading})</span>
+                <span class="text-sm text-gray-500 italic ml-1">${cw.meaning}</span>
+            `;
             compoundsList.appendChild(li);
         });
     } else {
