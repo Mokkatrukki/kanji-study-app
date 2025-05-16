@@ -3,6 +3,37 @@ import { performance } from 'perf_hooks';
 
 const router = Router();
 
+// Helper function to parse Tatoeba's structured transcriptions
+function parseTatoebaTranscription(transcription: string | null): Array<{ text: string, reading?: string }> {
+    if (!transcription) {
+        return [];
+    }
+
+    const segments: Array<{ text: string, reading?: string }> = [];
+    // Regex to match [Kanji|Reading] parts or plain text parts
+    // It captures bracketed parts and non-bracketed parts separately
+    const regex = /(\[[^\|]+\|[^\\\]]+\])|([^\[\]]+)/g;
+    let match;
+
+    while ((match = regex.exec(transcription)) !== null) {
+        if (match[1]) { // Bracketed part like [Kanji|Reading]
+            const content = match[1].slice(1, -1); // Remove outer brackets
+            const parts = content.split('|');
+            const text = parts[0];
+            const reading = parts.slice(1).join('').replace(/\|/g, ''); // Join if reading had '|', then remove all '|'
+            if (text) { // Ensure text is not empty
+                 segments.push({ text, reading });
+            }
+        } else if (match[2]) { // Plain text part
+            const text = match[2];
+            if (text.trim()) { // Ensure text is not just whitespace
+                segments.push({ text });
+            }
+        }
+    }
+    return segments;
+}
+
 /**
  * @swagger
  * /api/kanji:
@@ -57,10 +88,17 @@ const router = Router();
  *                      type: object
  *                      properties:
  *                        japanese: { type: string, description: "Japanese sentence." }
- *                        reading: { type: string, nullable: true, description: "Romaji or Kana reading of the sentence (if available)." }
+ *                        segments: 
+ *                          type: array
+ *                          description: "Parsed sentence segments for Furigana."
+ *                          items:
+ *                            type: object
+ *                            properties:
+ *                              text: { type: string, description: "Text segment (Kanji or Kana)." }
+ *                              reading: { type: string, nullable: true, description: "Kana reading for the Kanji segment." }
  *                        translation: { type: string, description: "English translation." }
  *                    example:
- *                      - { japanese: "想像できる？", reading: "そうぞうできる？", translation: "Can you picture it?" }
+ *                      - { japanese: "想像できる？", segments: [{text: "想像", reading: "そうぞう"}, {text: "できる？"}], translation: "Can you picture it?" }
  *       400:
  *         description: Invalid input.
  *         content:
@@ -218,7 +256,8 @@ router.post('/kanji', async (req: Request, res: Response) => {
         responseData.example_sentences = tatoebaData.data.map((item: any) => {
           let japaneseSentence = item.text || "";
           let englishTranslation = "";
-          let sentenceReading = null;
+          let sentenceSegments: Array<{ text: string, reading?: string }> = [];
+
           if (item.translations && Array.isArray(item.translations)) {
             let foundDirectEnglish = false;
             for (const group of item.translations) {
@@ -246,13 +285,13 @@ router.post('/kanji', async (req: Request, res: Response) => {
           if (item.transcriptions && item.transcriptions.length > 0) {
             const hiraganaTranscription = item.transcriptions.find((t: any) => t.script === 'Hrkt');
             if (hiraganaTranscription && hiraganaTranscription.text) {
-              sentenceReading = hiraganaTranscription.text.replace(/\[[^\|]+\|([^\]]+)\]/g, '$1').replace(/[\s\[\]]/g, '');
+              sentenceSegments = parseTatoebaTranscription(hiraganaTranscription.text);
             } else if (item.transcriptions[0] && item.transcriptions[0].text) {
-              sentenceReading = item.transcriptions[0].text.replace(/\[[^\|]+\|([^\]]+)\]/g, '$1').replace(/[\s\[\]]/g, '');
+              sentenceSegments = parseTatoebaTranscription(item.transcriptions[0].text);
             }
           }
-          return { japanese: japaneseSentence, reading: sentenceReading, translation: englishTranslation };
-        }).filter((s: any) => s.japanese && s.translation);
+          return { japanese: japaneseSentence, segments: sentenceSegments, translation: englishTranslation };
+        }).filter((s: any) => s.japanese && s.translation && s.segments.length > 0);
       }
     } else {
       console.warn(`Tatoeba API (unstable) request failed with status: ${tatoebaResponse.status}, body: ${await tatoebaResponse.text()}`);

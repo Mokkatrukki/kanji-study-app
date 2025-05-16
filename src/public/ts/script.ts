@@ -11,10 +11,16 @@ type ExampleSentence = {
     translation: string;
 };
 
-// New type for Tatoeba example sentences
+// Updated type for sentence segments
+type SentenceSegment = {
+    text: string;
+    reading?: string; // Reading is optional, only for Kanji parts
+};
+
+// Updated type for Tatoeba example sentences
 type TatoebaSentence = {
-    japanese: string;
-    reading: string | null; // Reading can be null
+    japanese: string; // The full original Japanese sentence text
+    segments: SentenceSegment[];
     translation: string;
 };
 
@@ -23,7 +29,7 @@ type KanjiApiResponse = {
     reading: string;
     meaning: string;
     compound_words: CompoundWord[];
-    example_sentences: TatoebaSentence[]; // Changed from string to TatoebaSentence[]
+    example_sentences: TatoebaSentence[]; // Updated to use the new TatoebaSentence type
 };
 
 // --- DOM Element Selection ---
@@ -138,28 +144,55 @@ function displayResults(data: KanjiApiResponse) {
         compoundsHeader.className = 'text-lg font-medium text-gray-700 mb-3'; // New classes for smaller size
     }
 
-    resultKanji.textContent = data.kanji;
-    // Clear existing classes and add new ones for main Kanji
-    resultKanji.className = 'text-7xl font-bold text-gray-800 text-center mb-1'; // Larger, bolder, centered
+    // Style for Furigana <rt> tags for compound words and sentences
+    const rtStyle = "font-size: 0.6em; line-height: 1.2;";
+    // Specific, smaller style for the main Kanji's Furigana
+    const mainKanjiRtStyle = "font-size: 0.35em; line-height: 1;";
 
-    resultReading.textContent = data.reading;
-    // Adjust classes for Kanji reading to better match sentence hierarchy
-    resultReading.className = 'text-xl text-gray-600 text-center mb-1'; 
+    // Display main Kanji with Furigana
+    if (data.reading && data.reading !== "N/A") {
+        resultKanji.innerHTML = `<ruby>${data.kanji}<rt style="${mainKanjiRtStyle}">${data.reading}</rt></ruby>`;
+    } else {
+        resultKanji.textContent = data.kanji;
+    }
+    resultKanji.className = 'text-7xl font-bold text-gray-800 text-center mb-1';
 
-    resultMeaning.textContent = data.meaning;
+    // Hide the old separate reading element
+    resultReading.style.display = 'none';
     // Adjust classes for Kanji meanings to match sentence translation "whispering" style
-    resultMeaning.className = 'text-sm text-gray-500 italic text-center mb-4'; 
+    resultMeaning.textContent = data.meaning;
+    resultMeaning.className = 'text-sm text-gray-500 italic text-center mb-4';
 
     // Populate compound words
     compoundsList.innerHTML = ''; // Clear previous results
     if (data.compound_words && data.compound_words.length > 0) {
         data.compound_words.forEach(cw => {
             const li = document.createElement('li');
-            li.innerHTML = `
-                <span class="text-2xl font-medium text-gray-800">${cw.word}</span>
-                <span class="text-sm text-gray-600 ml-1">(${cw.reading})</span>
-                <span class="text-sm text-gray-500 italic ml-1">${cw.meaning}</span>
+            li.className = "flex items-center py-2";
+            
+            let compoundWordPart;
+            if (cw.reading) {
+                compoundWordPart = `<ruby>${cw.word}<rt style="${rtStyle}">${cw.reading}</rt></ruby>`;
+            } else {
+                compoundWordPart = cw.word;
+            }
+
+            // Construct HTML for the two-column layout
+            // Left column for Japanese word - removed text-right to test alignment
+            const leftColumnHTML = `
+                <div class="w-2/5 pr-3">
+                    <p class="text-3xl font-medium text-gray-800">${compoundWordPart}</p>
+                </div>
             `;
+
+            // Right column for English meaning
+            const rightColumnHTML = `
+                <div class="w-3/5 pl-3">
+                    <p class="text-lg text-gray-400 italic">${cw.meaning}</p>
+                </div>
+            `;
+            
+            li.innerHTML = leftColumnHTML + rightColumnHTML;
             compoundsList.appendChild(li);
         });
     } else {
@@ -171,15 +204,21 @@ function displayResults(data: KanjiApiResponse) {
     if (data.example_sentences && data.example_sentences.length > 0) {
         data.example_sentences.forEach(sentence => {
             const div = document.createElement('div');
-            // Remove border, increase bottom margin for separation
-            div.className = 'mb-6 pt-2 pb-2'; 
+            div.className = 'mb-6 pt-2 pb-2';
 
-            // Increase Japanese sentence text size
-            let sentenceHTML = `<p class="text-2xl font-medium text-gray-800">${sentence.japanese}</p>`;
-            if (sentence.reading) {
-                sentenceHTML += `<p class="text-md text-gray-600">${sentence.reading}</p>`;
-            }
-            sentenceHTML += `<p class="text-sm text-gray-400 italic mt-1">${sentence.translation}</p>`;
+            // Construct the sentence HTML from segments
+            let sentenceWithFuriganaHTML = '';
+            sentence.segments.forEach(segment => {
+                if (segment.reading) {
+                    sentenceWithFuriganaHTML += `<ruby>${segment.text}<rt style="${rtStyle}">${segment.reading}</rt></ruby>`;
+                } else {
+                    sentenceWithFuriganaHTML += segment.text;
+                }
+            });
+
+            // Main sentence display using the assembled HTML
+            let sentenceHTML = `<p class="text-3xl font-medium text-gray-800">${sentenceWithFuriganaHTML}</p>`;
+            sentenceHTML += `<p class="text-lg text-gray-400 italic mt-1">${sentence.translation}</p>`;
             
             div.innerHTML = sentenceHTML;
             sentencesList.appendChild(div);
